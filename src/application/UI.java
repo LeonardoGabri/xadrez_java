@@ -35,12 +35,6 @@ public class UI {
     }
 
     private static void imprimePeca(PecaXadrez peca){
-        if(peca == null){
-            System.out.print("-");
-        }else {
-            System.out.print(peca);
-        }
-        System.out.print(" ");
         if (peca == null){
             System.out.print("-");
         }else {
