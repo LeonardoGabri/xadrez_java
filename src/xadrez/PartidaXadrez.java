@@ -6,8 +6,10 @@ import boardgame.Tabuleiro;
 import xadrez.pecas.Rei;
 import xadrez.pecas.Torre;
 
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class PartidaXadrez {
     private  int turno;
@@ -16,6 +18,8 @@ public class PartidaXadrez {
 
     private List<Peca> pecasDentroTabuleiro = new ArrayList<>();
     private List<Peca> pecasCapturadas = new ArrayList<>();
+
+    private boolean check;
 
     public PartidaXadrez(){
         tabuleiro = new Tabuleiro(8,8);
@@ -30,6 +34,10 @@ public class PartidaXadrez {
 
     public Color getJogadorAtual() {
         return jogadorAtual;
+    }
+
+    public boolean getCheck(){
+        return check;
     }
 
     public PecaXadrez[][]getPecas(){
@@ -54,6 +62,13 @@ public class PartidaXadrez {
         validandoPosicaoInicial(inicio);
         validandoPosicaoDestino(inicio, alvo);
         Peca pecaCapturada = fazerMovimento(inicio, alvo);
+
+        if (testarCheque(jogadorAtual)){
+            desfazerMovimento(inicio, alvo, pecaCapturada);
+            throw new excecaoXadrez("Voce não pode se oclocar em cheque");
+        }
+        check = (testarCheque(oponente(jogadorAtual)))?true:false;
+
         proximoTurno();
         return (PecaXadrez) pecaCapturada;
     }
@@ -85,16 +100,51 @@ public class PartidaXadrez {
         Peca p = tabuleiro.removerPeca(inicial);
         Peca capturada = tabuleiro.removerPeca(alvo);
         tabuleiro.lugarPeca(p, alvo);
-        if (capturada!= null){
+        if (capturada != null){
             pecasDentroTabuleiro.remove(pecasCapturadas);
             pecasCapturadas.add((Peca) pecasCapturadas);
         }
         return capturada;
     }
 
+    private void desfazerMovimento(Posicao inicial, Posicao alvo, Peca pecaCapturada){
+        Peca p = tabuleiro.removerPeca(alvo);
+        tabuleiro.lugarPeca(p, inicial);
+        if (pecaCapturada != null){
+            tabuleiro.lugarPeca(pecaCapturada, alvo);
+            pecasDentroTabuleiro.remove(pecaCapturada);
+        }
+    }
+
     private void lugarNovaPeca(char coluna, int linha, PecaXadrez peca){
         tabuleiro.lugarPeca(peca, new PosicaoXadrez(coluna, linha).toPosicao());
         pecasDentroTabuleiro.add(peca);
+    }
+
+    private Color oponente(Color color){
+        return  (color == Color.BRANCO) ? Color.PRETO : Color.BRANCO;
+    }
+
+    private PecaXadrez rei (Color color){
+        List<Peca> list = pecasDentroTabuleiro.stream().filter(x ->((PecaXadrez)x).getColor()==color).collect(Collectors.toList());
+        for (Peca p : list){
+            if (p instanceof Rei){
+                return (PecaXadrez) p;
+            }
+        }
+        throw new IllegalStateException("Não existe rei " + color +" no tabuleiro");
+    }
+
+    private boolean testarCheque(Color color){
+        Posicao posicaoRei = rei(color).getPosicaoXadrez().toPosicao();
+        List<Peca> pecasOponentes = pecasDentroTabuleiro.stream().filter(x ->((PecaXadrez)x).getColor()==oponente(color)).collect(Collectors.toList());
+        for (Peca p : pecasOponentes){
+             boolean [][] mat = p.movimentosPossiveis();
+            if (mat[posicaoRei.getLinha()][posicaoRei.getColuna()]){
+                return true;
+            }
+        }
+        return false;
 
     }
 
